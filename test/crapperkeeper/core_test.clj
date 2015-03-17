@@ -42,4 +42,6 @@
                                  :stop  (fn [context]
                                           (swap! results conj "stop ran"))}}]
     (boot! service)
+    (is (= @results #{"init ran" "start ran"}))
+    (shutdown!)
     (is (= @results #{"init ran" "start ran" "stop ran"}))))

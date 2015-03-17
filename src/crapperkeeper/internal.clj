@@ -20,18 +20,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn run-lifecycle-fn!
-  [fn-key]
+(schema/defn run-lifecycle-fn!
+  [fn-key :- (schema/enum :init :start :stop)]
   (doseq [service @services]
     (when-let [lifecycle-fn (get-in service [:lifecycle-fns fn-key])]
       (let [context (get @contexts (:id service))]
         (lifecycle-fn context)))))
-
-(defn run-lifecycle-fns!
-  []
-  (run-lifecycle-fn! :init)
-  (run-lifecycle-fn! :start)
-  (run-lifecycle-fn! :stop))
 
 (schema/defn service->id :- Keyword
   "Returns the ID of the service if it has inherited one by implementing a

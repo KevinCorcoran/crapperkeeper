@@ -8,10 +8,17 @@
 (schema/defn ^:always-validate boot!
   "Starts the Trapperkeeper framework with the given list of services."
   [& services :- [Service]]
-  (-> services
-      (internal/sort-services)
-      (reset! internal/services))
-  (internal/run-lifecycle-fns!))
+  (->> services
+       (internal/sort-services)
+       (reset! internal/services))
+  (internal/run-lifecycle-fn! :init)
+  (internal/run-lifecycle-fn! :start))
+
+(defn shutdown!
+  "Stops the Trapperkeeper framework and all services running within it.
+  Calls 'stop' on each service."
+  []
+  (internal/run-lifecycle-fn! :stop))
 
 (schema/defn ^:always-validate service-call
   "Inovkes the function named by 'fn-key' on the service-interface specified by
