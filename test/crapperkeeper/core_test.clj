@@ -2,7 +2,7 @@
   (:require [clojure.test :refer :all]
             [crapperkeeper.core :refer :all]
             [slingshot.slingshot :refer [try+]])
-  (:import (crapperkeeper.core ServiceInterface)))
+  (:import (crapperkeeper.schemas ServiceInterface)))
 
 (def FooService
   (ServiceInterface. :foo-service #{:foo}))
@@ -32,3 +32,14 @@
   ; Lots of more cases that could be added here,
   ; but we're really just testing schema validation.
   )
+
+(deftest lifecycle-test
+  (let [results (atom #{})
+        service {:lifecycle-fns {:init  (fn [context]
+                                          (swap! results conj "init ran"))
+                                 :start (fn [context]
+                                          (swap! results conj "start ran"))
+                                 :stop  (fn [context]
+                                          (swap! results conj "stop ran"))}}]
+    (boot! service)
+    (is (= @results #{"init ran" "start ran" "stop ran"}))))

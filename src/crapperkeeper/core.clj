@@ -1,36 +1,28 @@
 (ns crapperkeeper.core
   (:require [crapperkeeper.internal :as internal]
+            [crapperkeeper.schemas :refer :all]
             [schema.core :as schema])
-  (:import (clojure.lang Keyword IFn)))
-
-(schema/defrecord ServiceInterface
-  [id :- Keyword
-   service-fns :- #{Keyword}]) ; For now, a service function is simply a name (keyword)
-
-(def Service
-  "A schema which describes a Trapperkeeper service."
-  {(schema/optional-key :implements)  ServiceInterface
-   (schema/optional-key :service-fns) {Keyword IFn}})
+  (:import (clojure.lang Keyword)
+           (crapperkeeper.schemas ServiceInterface)))
 
 (schema/defn ^:always-validate boot!
   "Starts the Trapperkeeper framework with the given list of services."
   [& services :- [Service]]
-  (reset! internal/services
-          (into {}
-                (for [service services]
-                  {(get-in service [:implements :id]) service}))))
+  (-> services
+      (internal/sort-services)
+      (reset! internal/services))
+  (internal/run-lifecycle-fns!))
 
 (schema/defn ^:always-validate service-call
-  "Inovkes the function named by 'fn-key' on the service specified by
-  'service-id' using the given arguments."
-  [service :- ServiceInterface
+  "Inovkes the function named by 'fn-key' on the service-interface specified by
+  'service-interface' using the given arguments."
+  [service-interface :- ServiceInterface
    fn-key :- Keyword
    & args]
-  (let [context (get @internal/contexts (:id service))
-        service (get @internal/services (:id service))
-        service-fn (get-in service [:service-fns fn-key])]
-    #_(println "services are" @internal/services)
-    #_(println "Invoking service function" fn-key
-             "on service" service
-             "with context" context)
+  (let [id (:id service-interface)
+        service (first (filter
+                         #(= (:id %) id)
+                         @internal/services))
+        service-fn (get-in service [:service-fns fn-key])
+        context (get @internal/contexts id)]
     (apply service-fn context args)))
