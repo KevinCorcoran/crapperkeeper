@@ -1,8 +1,10 @@
 (ns crapperkeeper.core-test
   (:require [clojure.test :refer :all]
-            [crapperkeeper.core :refer :all]))
+            [crapperkeeper.core :refer :all])
+  (:import (crapperkeeper.core ServiceInterface)))
 
-(def ServiceA nil) ; TODO
+(def ServiceA
+  (ServiceInterface. #{:foo}))
 
 (def service-a
   {:implements 'ServiceA

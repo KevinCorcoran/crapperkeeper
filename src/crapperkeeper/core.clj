@@ -1,9 +1,12 @@
 (ns crapperkeeper.core
-  (:require [crapperkeeper.internal :as internal]))
+  (:require [crapperkeeper.internal :as internal]
+            [schema.core :as schema])
+  (:import (clojure.lang Symbol Keyword)))
 
 (defn boot!
   "Starts the Trapperkeeper framework with the given list of services."
   [& services]
+  ; TODO validate all :implements values as ServiceInterfaces
   (swap! internal/services conj (first services))
   #_(let [first-service (first services)
         service-symbol (:implements first-service)]
@@ -21,3 +24,7 @@
              "on service" service
              "with context" context)
     (apply service-fn context args)))
+
+(schema/defrecord ServiceInterface
+  ; For now, a service function is simply a name (keyword)
+  [service-fns :- #{Keyword}])
