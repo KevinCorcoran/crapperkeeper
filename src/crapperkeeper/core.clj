@@ -7,7 +7,7 @@
   "Starts the Trapperkeeper framework with the given list of services."
   [& services]
   ; TODO validate all :implements values as ServiceInterfaces
-  (swap! internal/services conj (first services))
+  (reset! internal/services services)
   #_(let [first-service (first services)
         service-symbol (:implements first-service)]
     (swap! internal/services assoc service-symbol first-service)))
