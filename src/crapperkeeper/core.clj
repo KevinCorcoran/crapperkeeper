@@ -13,12 +13,13 @@
   ([services :- [Service]
     config]
     (internal/validate-config! services config)
-    (let [services (map internal/with-service-id services)
-          contexts (into {} (for [service services]
-                              (let [id (:id service)]
-                                {id {:config config}})))]
-      (internal/run-lifecycle-fns! :init services contexts)
-      (internal/run-lifecycle-fns! :start services contexts)
+    (let [services-with-ids (map internal/with-service-id services)
+          contexts (into {} (for [service services-with-ids]
+                              ; The initial context for each service is
+                              ; simply the config data and nothing more.
+                              {(:id service) {:config config}}))]
+      (internal/run-lifecycle-fns! :init services-with-ids contexts)
+      (internal/run-lifecycle-fns! :start services-with-ids contexts)
 
       (schema/defn ^:always-validate service-call
         "Inovkes the function named by 'fn-key' on the service-interface
@@ -29,7 +30,7 @@
         (let [id (:id service-interface)
               service (first (filter
                                #(= (:id %) id)
-                               services))
+                               services-with-ids))
               service-fn (get-in service [:service-fns fn-key])
               context (get contexts id)]
           (apply service-fn context args)))
@@ -38,4 +39,4 @@
         "Stops the Trapperkeeper framework and all services running within it.
         Calls 'stop' on each service."
         []
-        (internal/run-lifecycle-fns! :stop services contexts)))))
+        (internal/run-lifecycle-fns! :stop services-with-ids contexts)))))
