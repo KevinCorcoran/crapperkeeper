@@ -1,11 +1,26 @@
 (ns crapperkeeper.core-test
   (:require [clojure.test :refer :all]
             [crapperkeeper.core :refer :all]
+            [crapperkeeper.internal :as internal]
             [slingshot.slingshot :refer [try+]]
             [schema.test :as schema-test])
   (:import (crapperkeeper.schemas ServiceInterface)))
 
 (use-fixtures :once schema-test/validate-schemas)
+
+; This may be terrible
+(defn reset-tk-state!
+  []
+  (reset! internal/services-atom nil)
+  (reset! internal/contexts-atom {}))
+
+(defmacro with-tk
+  [services config & body]
+  `(try
+     (boot! ~services ~config)
+     ~@body
+     (finally
+       (reset-tk-state!))))
 
 (def HelloService
   (ServiceInterface. :hello-service #{:hello}))
@@ -18,9 +33,9 @@
 (def InvalidService nil)
 
 (deftest simplest-service-test
-  (boot! [hello-service])
-  (is (= (service-call HelloService :hello)
-         "hello world")))
+  (with-tk [hello-service] {}
+           (is (= (service-call HelloService :hello)
+                  "hello world"))))
 
 (deftest invalid-service-test
   (testing ":implements value is not a ServiceInterface"
@@ -45,10 +60,13 @@
                                           (swap! results conj "start ran"))
                                  :stop  (fn [context]
                                           (swap! results conj "stop ran"))}}]
-    (boot! [service])
-    (is (= @results #{"init ran" "start ran"}))
-    (shutdown!)
-    (is (= @results #{"init ran" "start ran" "stop ran"}))))
+    (try
+      (boot! [service])
+      (is (= @results #{"init ran" "start ran"}))
+      (shutdown!)
+      (is (= @results #{"init ran" "start ran" "stop ran"}))
+      (finally
+        (reset-tk-state!)))))
 
 (deftest config-test
   (testing "a service can read Trapperkeeper's configuration data"
@@ -57,8 +75,8 @@
                            (reset! result
                                    (get-in context [:config :foo])))
           service {:lifecycle-fns {:init extract-config}}]
-      (boot! [service] {:foo "bar"})
-      (is (= "bar" @result)))))
+      (with-tk [service] {:foo "bar"}
+               (is (= "bar" @result))))))
 
 (deftest required-config-test
   (testing "a service can define a schema for its required configuration"
@@ -82,8 +100,8 @@
                                  " and mars")))
           bar-service {:dependencies  #{HelloService}
                        :lifecycle-fns {:init init-fn}}]
-      (boot! [hello-service bar-service])
-      (is (= "hello world and mars" @result)))))
+      (with-tk [hello-service bar-service] {}
+               (is (= "hello world and mars" @result))))))
 
 (deftest dependency-order-test
   (let [result (atom {})
@@ -101,19 +119,20 @@
                    :lifecycle-fns {:init service-1-init}}
         service-2 {:dependencies #{HelloService}
                    :lifecycle-fns {:init service-2-init}}]
-    (boot! [service-1 service-2])
-    (testing "both services should have booted"
-      (is (get-in @result [:service-1 :init?]))
-      (is (get-in @result [:service-2 :init?])))
-    (testing "1 should have booted before 2"
-      (is (not (get-in @result [:service-1 :service-2-init?])))
-      (is (get-in @result [:service-2 :service-1-init?])))
+    (with-tk [service-1 service-2] {}
+             (testing "both services should have booted"
+               (is (get-in @result [:service-1 :init?]))
+               (is (get-in @result [:service-2 :init?])))
+             (testing "1 should have booted before 2"
+               (is (not (get-in @result [:service-1 :service-2-init?])))
+               (is (get-in @result [:service-2 :service-1-init?]))))
+
     (testing "the order in which the services are specified should not matter"
       (reset! result {})
-      (boot! [service-2 service-1])
-      (testing "both services should have booted"
-        (is (get-in @result [:service-1 :init?]))
-        (is (get-in @result [:service-2 :init?])))
-      (testing "1 should have booted before 2"
-        (is (not (get-in @result [:service-1 :service-2-init?])))
-        (is (get-in @result [:service-2 :service-1-init?]))))))
+      (with-tk [service-2 service-1] {}
+               (testing "both services should have booted"
+                 (is (get-in @result [:service-1 :init?]))
+                 (is (get-in @result [:service-2 :init?])))
+               (testing "1 should have booted before 2"
+                 (is (not (get-in @result [:service-1 :service-2-init?])))
+                 (is (get-in @result [:service-2 :service-1-init?])))))))
