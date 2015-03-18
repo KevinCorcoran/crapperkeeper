@@ -24,7 +24,7 @@
                                         "hello from foo")}}
           got-expected-exception? (atom false)]
       (try+
-        (boot! service)
+        (boot! [service])
         (catch [:type :schema.core/error] _
           (reset! got-expected-exception? true)))
       (is @got-expected-exception?)))
@@ -55,3 +55,16 @@
           service {:lifecycle-fns {:init extract-config}}]
       (boot! [service] {:foo "bar"})
       (is (= "bar" @result)))))
+
+(deftest required-config-test
+  (testing "a service can define a schema for its required configuration"
+    (let [service {:lifecycle-fns {:init (fn [context] nil)}
+                   :config-schema {:webserver {:host String
+                                               :port Integer}}}
+          got-expected-exception? (atom false)]
+      (testing "empty config"
+        (try+
+          (boot! [service])
+          (catch [:type :crapperkeeper/invalid-config-error] _
+            (reset! got-expected-exception? true)))
+        (is @got-expected-exception?)))))

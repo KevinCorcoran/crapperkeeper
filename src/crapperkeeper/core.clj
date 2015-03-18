@@ -12,16 +12,16 @@
     (boot! services {}))
   ([services :- [Service]
     config]
-    (internal/initialize-services! services)
-    (internal/initialize-contexts! config)
-    (internal/run-lifecycle-fn! :init)
-    (internal/run-lifecycle-fn! :start)))
+    (internal/validate-config! services config)
+    (internal/initialize! services config)
+    (internal/run-lifecycle-fns! :init)
+    (internal/run-lifecycle-fns! :start)))
 
 (defn shutdown!
   "Stops the Trapperkeeper framework and all services running within it.
   Calls 'stop' on each service."
   []
-  (internal/run-lifecycle-fn! :stop))
+  (internal/run-lifecycle-fns! :stop))
 
 (schema/defn ^:always-validate service-call
   "Inovkes the function named by 'fn-key' on the service-interface specified by
