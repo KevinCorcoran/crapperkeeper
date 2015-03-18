@@ -13,7 +13,7 @@
   (let [service {:implements  FooService
                  :service-fns {:foo (fn [context]
                                       "hello from foo")}}]
-    (boot! service))
+    (boot! [service]))
   (is (= (service-call FooService :foo)
          "hello from foo")))
 
@@ -41,7 +41,17 @@
                                           (swap! results conj "start ran"))
                                  :stop  (fn [context]
                                           (swap! results conj "stop ran"))}}]
-    (boot! service)
+    (boot! [service])
     (is (= @results #{"init ran" "start ran"}))
     (shutdown!)
     (is (= @results #{"init ran" "start ran" "stop ran"}))))
+
+(deftest config-test
+  (testing "a service can read Trapperkeeper's configuration data"
+    (let [result (atom nil)
+          extract-config (fn [context]
+                           (reset! result
+                                   (get-in context [:config :foo])))
+          service {:lifecycle-fns {:init extract-config}}]
+      (boot! [service] {:foo "bar"})
+      (is (= "bar" @result)))))

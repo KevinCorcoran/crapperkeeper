@@ -6,9 +6,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; state
 
-(def services (atom nil))
+(def services-atom (atom nil))
 
-(def contexts (atom nil))
+(def contexts-atom (atom {}))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -22,9 +22,9 @@
 
 (schema/defn run-lifecycle-fn!
   [fn-key :- (schema/enum :init :start :stop)]
-  (doseq [service @services]
+  (doseq [service @services-atom]
     (when-let [lifecycle-fn (get-in service [:lifecycle-fns fn-key])]
-      (let [context (get @contexts (:id service))]
+      (let [context (get @contexts-atom (:id service))]
         (lifecycle-fn context)))))
 
 (schema/defn service->id :- Keyword
@@ -39,7 +39,19 @@
   [service :- Service]
   (assoc service :id (service->id service)))
 
-(schema/defn sort-services :- [ServiceWithId]
+(schema/defn ^:always-validate sort-services :- [ServiceWithId]
   [services :- [Service]]
   ; TODO this is not actually sorting yet, currently just returning in input order
   (map with-service-id services))
+
+(defn initialize-contexts!
+  [config]
+  (doseq [service @services-atom]
+    (let [id (:id service)]
+      (swap! contexts-atom assoc id {:config config}))))
+
+(defn initialize-services!
+  [services]
+  (->> services
+       (sort-services)
+       (reset! services-atom)))

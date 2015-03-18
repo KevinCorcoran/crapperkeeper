@@ -7,12 +7,14 @@
 
 (schema/defn ^:always-validate boot!
   "Starts the Trapperkeeper framework with the given list of services."
-  [& services :- [Service]]
-  (->> services
-       (internal/sort-services)
-       (reset! internal/services))
-  (internal/run-lifecycle-fn! :init)
-  (internal/run-lifecycle-fn! :start))
+  ([services :- [Service]]
+    (boot! services {}))
+  ([services :- [Service]
+    config]
+    (internal/initialize-services! services)
+    (internal/initialize-contexts! config)
+    (internal/run-lifecycle-fn! :init)
+    (internal/run-lifecycle-fn! :start)))
 
 (defn shutdown!
   "Stops the Trapperkeeper framework and all services running within it.
@@ -29,7 +31,7 @@
   (let [id (:id service-interface)
         service (first (filter
                          #(= (:id %) id)
-                         @internal/services))
+                         @internal/services-atom))
         service-fn (get-in service [:service-fns fn-key])
-        context (get @internal/contexts id)]
+        context (get @internal/contexts-atom id)]
     (apply service-fn context args)))
