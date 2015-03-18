@@ -3,7 +3,8 @@
             [crapperkeeper.schemas :refer :all]
             [schema.core :as schema])
   (:import (clojure.lang Keyword)
-           (crapperkeeper.schemas ServiceInterface)))
+           (crapperkeeper.schemas ServiceInterface)
+           (java.util Map)))
 
 (schema/defn ^:always-validate boot!
   "Starts the Trapperkeeper framework with the given list of services
@@ -11,12 +12,12 @@
   ([services :- [Service]]
     (boot! services {}))
   ([services :- [Service]
-    config]
+    config :- Map]
     (internal/validate-config! services config)
-    (let [services-with-ids (map internal/with-service-id services)
-          contexts (->> (internal/initial-contexts services-with-ids config)
-                        (internal/run-lifecycle-fns :init services-with-ids)
-                        (internal/run-lifecycle-fns :start services-with-ids))]
+    (let [services* (internal/prepare-services services)
+          contexts (->> (internal/initial-contexts services* config)
+                        (internal/run-lifecycle-fns :init services*)
+                        (internal/run-lifecycle-fns :start services*))]
 
       ; Services and contexts are now initialized.
       ; We can define the main Trapperkeeper API function now.
@@ -30,7 +31,7 @@
         (let [id (:id service-interface)
               service (first (filter
                                #(= (:id %) id)
-                               services-with-ids))
+                               services*))
               service-fn (get-in service [:service-fns fn-key])
               context (get contexts id)]
           (apply service-fn context args)))
@@ -39,4 +40,4 @@
         "Stops the Trapperkeeper framework and all services running within it.
         Calls 'stop' on each service."
         []
-        (internal/run-lifecycle-fns :stop services-with-ids contexts)))))
+        (internal/run-lifecycle-fns :stop services* contexts)))))

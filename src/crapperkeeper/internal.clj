@@ -2,7 +2,8 @@
   (:require [crapperkeeper.schemas :refer :all]
             [schema.core :as schema]
             [slingshot.slingshot :refer [throw+]])
-  (:import (clojure.lang Keyword)))
+  (:import (clojure.lang Keyword)
+           (java.util Map)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -14,8 +15,9 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn validate-config!
-  [services config]
+(schema/defn validate-config!
+  [services :- [Service]
+   config :- Map]
   (doseq [service services]
     (when-let [config-schema (:config-schema service)]
       (when-let [schema-error (schema/check config-schema config)]
@@ -39,19 +41,23 @@
   "Returns the initial context for each service in 'services'.
   The initial context is simply the config data and nothing more."
   [services :- [ServiceWithId]
-   config]
+   config :- Map]
   (into {} (for [service services]
              {(:id service) {:config config}})))
 
-(schema/defn ^:always-validate run-lifecycle-fns
+(schema/defn run-lifecycle-fns
   "Invokes the lifecycle function specified by 'fn-key' on every service in
   'services'.  Returns the updated contexts."
   [fn-key :- (schema/enum :init :start :stop)
    services :- [ServiceWithId]
-   contexts]
+   contexts :- Map]
   (into {}
         (for [service services]
           (let [lifecycle-fn (get-in service [:lifecycle-fns fn-key])
                 id (:id service)
                 context (get contexts id)]
             {id (if lifecycle-fn (lifecycle-fn context) context)}))))
+
+(schema/defn prepare-services :- [ServiceWithId]
+  [services :- [Service]]
+  (map with-service-id services))
