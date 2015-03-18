@@ -84,3 +84,36 @@
                        :lifecycle-fns {:init init-fn}}]
       (boot! [hello-service bar-service])
       (is (= "hello world and mars" @result)))))
+
+(deftest dependency-order-test
+  (let [result (atom {})
+        service-1-init (fn [context]
+                         (swap! result assoc :service-1
+                                {:init?            true
+                                 :service-2-init?  (get-in @result [:service-2 :init?])}))
+        service-2-init (fn [context]
+                         (swap! result assoc :service-2
+                                {:init?            true
+                                 :service-1-init?  (get-in @result [:service-1 :init?])}))
+        service-1 {:implements HelloService
+                   :service-fns {:hello (fn [context]
+                                          "Hello again")}
+                   :lifecycle-fns {:init service-1-init}}
+        service-2 {:dependencies #{HelloService}
+                   :lifecycle-fns {:init service-2-init}}]
+    (boot! [service-1 service-2])
+    (testing "both services should have booted"
+      (is (get-in @result [:service-1 :init?]))
+      (is (get-in @result [:service-2 :init?])))
+    (testing "1 should have booted before 2"
+      (is (not (get-in @result [:service-1 :service-2-init?])))
+      (is (get-in @result [:service-2 :service-1-init?])))
+    (testing "the order in which the services are specified should not matter"
+      (reset! result {})
+      (boot! [service-2 service-1])
+      (testing "both services should have booted"
+        (is (get-in @result [:service-1 :init?]))
+        (is (get-in @result [:service-2 :init?])))
+      (testing "1 should have booted before 2"
+        (is (not (get-in @result [:service-1 :service-2-init?])))
+        (is (get-in @result [:service-2 :service-1-init?]))))))
