@@ -1,27 +1,31 @@
 (ns crapperkeeper.core-test
   (:require [clojure.test :refer :all]
             [crapperkeeper.core :refer :all]
-            [slingshot.slingshot :refer [try+]])
+            [slingshot.slingshot :refer [try+]]
+            [schema.test :as schema-test])
   (:import (crapperkeeper.schemas ServiceInterface)))
 
-(def FooService
-  (ServiceInterface. :foo-service #{:foo}))
+(use-fixtures :once schema-test/validate-schemas)
+
+(def HelloService
+  (ServiceInterface. :hello-service #{:hello}))
+
+(def hello-service
+  {:implements  HelloService
+   :service-fns {:hello (fn [context]
+                        "hello world")}})
 
 (def InvalidService nil)
 
 (deftest simplest-service-test
-  (let [service {:implements  FooService
-                 :service-fns {:foo (fn [context]
-                                      "hello from foo")}}]
-    (boot! [service]))
-  (is (= (service-call FooService :foo)
-         "hello from foo")))
+  (boot! [hello-service])
+  (is (= (service-call HelloService :hello)
+         "hello world")))
 
 (deftest invalid-service-test
   (testing ":implements value is not a ServiceInterface"
     (let [service {:implements  InvalidService
-                   :service-fns {:foo (fn [context]
-                                        "hello from foo")}}
+                   :service-fns {:foo (fn [context] nil)}}
           got-expected-exception? (atom false)]
       (try+
         (boot! [service])
@@ -68,3 +72,15 @@
           (catch [:type :crapperkeeper/invalid-config-error] _
             (reset! got-expected-exception? true)))
         (is @got-expected-exception?)))))
+
+(deftest service-dependency-test
+  (testing "a service can express a dependency on another service"
+    (let [result (atom nil)
+          init-fn (fn [context]
+                    (reset! result
+                            (str (service-call HelloService :hello)
+                                 " and mars")))
+          bar-service {:dependencies  #{HelloService}
+                       :lifecycle-fns {:init init-fn}}]
+      (boot! [hello-service bar-service])
+      (is (= "hello world and mars" @result)))))
