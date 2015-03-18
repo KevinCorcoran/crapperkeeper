@@ -4,13 +4,6 @@
             [slingshot.slingshot :refer [throw+]])
   (:import (clojure.lang Keyword)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; state
-
-(def services-atom (atom nil))
-
-(def contexts-atom (atom {}))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; internal schemas (public schemas defined in crapperkeeper.schemas)
@@ -29,7 +22,7 @@
         (throw+ {:type :crapperkeeper/invalid-config-error
                  :error schema-error})))))
 
-(schema/defn service->id :- Keyword
+(schema/defn ->id :- Keyword
   "Returns the ID of the service if it has inherited one by implementing a
   service interface, otherwise generates a new ID."
   [service :- Service]
@@ -40,23 +33,15 @@
 (schema/defn with-service-id :- ServiceWithId
   "Wraps the given service with an ID."
   [service :- Service]
-  (assoc service :id (service->id service)))
-
-(defn initialize!
-  "Initializes 'services-atom' and 'contexts-atom'."
-  [services config]
-  (->> services
-       (map with-service-id)
-       (reset! services-atom))
-  (doseq [service @services-atom]
-    (let [id (:id service)]
-      (swap! contexts-atom assoc id {:config config}))))
+  (assoc service :id (->id service)))
 
 (schema/defn ^:always-validate run-lifecycle-fns!
-  "Invokes the lifecycle function specified by 'fn-key' on
-  every service in the application."
-  [fn-key :- (schema/enum :init :start :stop)]
-  (doseq [service @services-atom]
+  "Invokes the lifecycle function specified by 'fn-key' on every service in
+  'services'."
+  [fn-key :- (schema/enum :init :start :stop)
+   services :- [ServiceWithId]
+   contexts]
+  (doseq [service services]
     (when-let [lifecycle-fn (get-in service [:lifecycle-fns fn-key])]
-      (let [context (get @contexts-atom (:id service))]
+      (let [context (get contexts (:id service))]
         (lifecycle-fn context)))))
