@@ -35,13 +35,23 @@
   [service :- Service]
   (assoc service :id (->id service)))
 
-(schema/defn ^:always-validate run-lifecycle-fns!
+(schema/defn initial-contexts
+  "Returns the initial context for each service in 'services'.
+  The initial context is simply the config data and nothing more."
+  [services :- [ServiceWithId]
+   config]
+  (into {} (for [service services]
+             {(:id service) {:config config}})))
+
+(schema/defn ^:always-validate run-lifecycle-fns
   "Invokes the lifecycle function specified by 'fn-key' on every service in
-  'services'."
+  'services'.  Returns the updated contexts."
   [fn-key :- (schema/enum :init :start :stop)
    services :- [ServiceWithId]
    contexts]
-  (doseq [service services]
-    (when-let [lifecycle-fn (get-in service [:lifecycle-fns fn-key])]
-      (let [context (get contexts (:id service))]
-        (lifecycle-fn context)))))
+  (into {}
+        (for [service services]
+          (let [lifecycle-fn (get-in service [:lifecycle-fns fn-key])
+                id (:id service)
+                context (get contexts id)]
+            {id (if lifecycle-fn (lifecycle-fn context) context)}))))

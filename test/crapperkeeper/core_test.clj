@@ -50,6 +50,14 @@
     (shutdown!)
     (is (= @results #{"init ran" "start ran" "stop ran"}))))
 
+(deftest context-test
+  (let [service {:implements HelloService
+                 :lifecycle-fns {:init (fn [context]
+                                         (assoc context :init? true))}
+                 :service-fns {:hello identity}}]
+    (boot! [service])
+    (is (:init? (service-call HelloService :hello)))))
+
 (deftest config-test
   (testing "a service can read Trapperkeeper's configuration data"
     (let [result (atom nil)
