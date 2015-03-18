@@ -20,7 +20,7 @@
                         (internal/run-lifecycle-fns :start services*))]
 
       ; Services and contexts are now initialized.
-      ; We can define the main Trapperkeeper API function now.
+      ; We can define the main Trapperkeeper API functions now.
 
       (schema/defn ^:always-validate service-call
         "Inovkes the function named by 'fn-key' on the service-interface

@@ -32,12 +32,12 @@
     (get-in service [:implements :id])
     (keyword (gensym "trapperkeeper-service-"))))
 
-(schema/defn with-service-id :- ServiceWithId
+(schema/defn with-id :- ServiceWithId
   "Wraps the given service with an ID."
   [service :- Service]
   (assoc service :id (->id service)))
 
-(schema/defn initial-contexts
+(schema/defn initial-contexts :- Map
   "Returns the initial context for each service in 'services'.
   The initial context is simply the config data and nothing more."
   [services :- [ServiceWithId]
@@ -45,7 +45,7 @@
   (into {} (for [service services]
              {(:id service) {:config config}})))
 
-(schema/defn run-lifecycle-fns
+(schema/defn run-lifecycle-fns :- Map
   "Invokes the lifecycle function specified by 'fn-key' on every service in
   'services'.  Returns the updated contexts."
   [fn-key :- (schema/enum :init :start :stop)
@@ -58,6 +58,22 @@
                 context (get contexts id)]
             {id (if lifecycle-fn (lifecycle-fn context) context)}))))
 
+(schema/defn with-optional-dependencies :- [ServiceWithId]
+  [services :- [ServiceWithId]]
+  ; TODO
+  services)
+
+(schema/defn sort-dependencies :- [ServiceWithId]
+  "Given a list of services, returns a list of services in a dependency-order."
+  [services :- [ServiceWithId]]
+  ; TODO
+  services)
+
 (schema/defn prepare-services :- [ServiceWithId]
+  "Given the user-defined list of services,
+  returns a list of services ready for use by Trapperkeeper."
   [services :- [Service]]
-  (map with-service-id services))
+  (->> services
+       (map with-id)
+       (with-optional-dependencies)
+       (sort-dependencies)))
