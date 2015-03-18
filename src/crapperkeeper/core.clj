@@ -6,7 +6,8 @@
            (crapperkeeper.schemas ServiceInterface)))
 
 (schema/defn ^:always-validate boot!
-  "Starts the Trapperkeeper framework with the given list of services."
+  "Starts the Trapperkeeper framework with the given list of services
+  and configuration data."
   ([services :- [Service]]
     (boot! services {}))
   ([services :- [Service]

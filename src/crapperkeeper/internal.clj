@@ -15,12 +15,13 @@
 ; internal schemas (public schemas defined in crapperkeeper.schemas)
 
 (def ServiceWithId
-  (merge Service {:id Keyword}))
+  (assoc Service :id Keyword))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (schema/defn run-lifecycle-fn!
+  "Invokes the lifecycle function specified by 'fn-key'."
   [fn-key :- (schema/enum :init :start :stop)]
   (doseq [service @services-atom]
     (when-let [lifecycle-fn (get-in service [:lifecycle-fns fn-key])]
@@ -36,13 +37,9 @@
     (keyword (gensym "trapperkeeper-service-"))))
 
 (schema/defn with-service-id :- ServiceWithId
+  "Wraps the given service with an ID."
   [service :- Service]
   (assoc service :id (service->id service)))
-
-(schema/defn ^:always-validate sort-services :- [ServiceWithId]
-  [services :- [Service]]
-  ; TODO this is not actually sorting yet, currently just returning in input order
-  (map with-service-id services))
 
 (defn initialize-contexts!
   [config]
@@ -50,8 +47,8 @@
     (let [id (:id service)]
       (swap! contexts-atom assoc id {:config config}))))
 
-(defn initialize-services!
-  [services]
+(schema/defn initialize-services!
+  [services :- [Service]]
   (->> services
-       (sort-services)
+       (map with-service-id)
        (reset! services-atom)))
