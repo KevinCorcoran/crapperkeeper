@@ -1,7 +1,9 @@
 (ns crapperkeeper.internal
   (:require [crapperkeeper.schemas :refer :all]
             [schema.core :as schema]
-            [slingshot.slingshot :refer [throw+]])
+            [slingshot.slingshot :refer [throw+]]
+            [loom.graph :as loom]
+            [loom.alg :as loom-alg])
   (:import (clojure.lang Keyword)
            (java.util Map)))
 
@@ -67,6 +69,8 @@
   "Given a list of services, returns a list of services in a dependency-order."
   [services :- [ServiceWithId]]
   ; TODO
+  #_(let [graph (loom/digraph (loom/graph ?))]
+    (loom-alg/topsort graph))
   services)
 
 (schema/defn prepare-services :- [ServiceWithId]
