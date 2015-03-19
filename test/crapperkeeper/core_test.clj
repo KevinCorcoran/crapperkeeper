@@ -1,19 +1,11 @@
 (ns crapperkeeper.core-test
   (:require [clojure.test :refer :all]
             [crapperkeeper.core :refer :all]
+            [crapperkeeper.fixtures :refer :all]
             [slingshot.slingshot :refer [try+]]
-            [schema.test :as schema-test])
-  (:import (crapperkeeper.schemas ServiceInterface)))
+            [schema.test :as schema-test]))
 
 (use-fixtures :once schema-test/validate-schemas)
-
-(def HelloService
-  (ServiceInterface. :hello-service #{:hello}))
-
-(def hello-service
-  {:implements  HelloService
-   :service-fns {:hello (fn [context]
-                        "hello world")}})
 
 (def InvalidService nil)
 

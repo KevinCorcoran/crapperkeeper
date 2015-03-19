@@ -26,7 +26,7 @@
         (throw+ {:type :crapperkeeper/invalid-config-error
                  :error schema-error})))))
 
-(schema/defn ->id :- Keyword
+(schema/defn service->id :- Keyword
   "Returns the ID of the service if it has inherited one by implementing a
   service interface, otherwise generates a new ID."
   [service :- Service]
@@ -35,9 +35,13 @@
     (keyword (gensym "trapperkeeper-service-"))))
 
 (schema/defn with-id :- ServiceWithId
-  "Wraps the given service with an ID."
   [service :- Service]
-  (assoc service :id (->id service)))
+  (assoc service :id (service->id service)))
+
+(schema/defn with-ids :- [ServiceWithId]
+  "Wraps each of the given services with an ID."
+  [services :- [Service]]
+  (map services with-id))
 
 (schema/defn initial-contexts :- Map
   "Returns the initial context for each service in 'services'.
@@ -65,19 +69,29 @@
   ; TODO
   services)
 
+(schema/defn services->graph
+  [services :- [ServiceWithId]]
+  ; TODO
+  )
+
+(schema/defn graph->services :- ServiceWithId
+  [graph]
+  ; TODO
+  )
+
 (schema/defn sort-dependencies :- [ServiceWithId]
   "Given a list of services, returns a list of services in a dependency-order."
   [services :- [ServiceWithId]]
-  ; TODO
-  #_(let [graph (loom/digraph (loom/graph ?))]
-    (loom-alg/topsort graph))
-  services)
+  (-> services
+      (services->graph)
+      (loom-alg/topsort)
+      (graph->services)))
 
 (schema/defn prepare-services :- [ServiceWithId]
   "Given the user-defined list of services,
   returns a list of services ready for use by Trapperkeeper."
   [services :- [Service]]
   (->> services
-       (map with-id)
+       (with-ids)
        (with-optional-dependencies)
        (sort-dependencies)))
