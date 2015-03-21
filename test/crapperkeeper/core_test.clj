@@ -2,32 +2,17 @@
   (:require [clojure.test :refer :all]
             [crapperkeeper.core :refer :all]
             [crapperkeeper.fixtures :refer :all]
+            [crapperkeeper.test-utils :refer [with-tk with-services]]
             [slingshot.slingshot :refer [try+]]
             [schema.test :as schema-test]))
 
 (use-fixtures :once schema-test/validate-schemas)
 
-(def InvalidService nil)
 
 (deftest simplest-service-test
-  (boot! [hello-service])
-  (is (= (service-call HelloService :hello)
-         "hello world")))
-
-(deftest invalid-service-test
-  (testing ":implements value is not a ServiceInterface"
-    (let [service {:implements  InvalidService
-                   :service-fns {:foo (fn [context] nil)}}
-          got-expected-exception? (atom false)]
-      (try+
-        (boot! [service])
-        (catch [:type :schema.core/error] _
-          (reset! got-expected-exception? true)))
-      (is @got-expected-exception?)))
-
-  ; Lots of more cases that could be added here,
-  ; but we're really just testing schema validation.
-  )
+  (with-services [hello-service]
+    (is (= (service-call HelloService :hello)
+           "hello world"))))
 
 (deftest lifecycle-test
   (let [results (atom #{})
@@ -37,18 +22,18 @@
                                           (swap! results conj "start ran"))
                                  :stop  (fn [context]
                                           (swap! results conj "stop ran"))}}]
-    (boot! [service])
-    (is (= @results #{"init ran" "start ran"}))
-    (shutdown!)
-    (is (= @results #{"init ran" "start ran" "stop ran"}))))
+    (with-services [service]
+      (is (= @results #{"init ran" "start ran"}))
+      (shutdown!)
+      (is (= @results #{"init ran" "start ran" "stop ran"})))))
 
 (deftest context-test
   (let [service {:implements HelloService
                  :lifecycle-fns {:init (fn [context]
                                          (assoc context :init? true))}
                  :service-fns {:hello identity}}]
-    (boot! [service])
-    (is (:init? (service-call HelloService :hello)))))
+    (with-services [service]
+      (is (:init? (service-call HelloService :hello))))))
 
 (deftest config-test
   (testing "a service can read Trapperkeeper's configuration data"
@@ -57,21 +42,8 @@
                            (reset! result
                                    (get-in context [:config :foo])))
           service {:lifecycle-fns {:init extract-config}}]
-      (boot! [service] {:foo "bar"})
+      (with-tk [service] {:foo "bar"})
       (is (= "bar" @result)))))
-
-(deftest required-config-test
-  (testing "a service can define a schema for its required configuration"
-    (let [service {:lifecycle-fns {:init (fn [context] nil)}
-                   :config-schema {:webserver {:host String
-                                               :port Integer}}}
-          got-expected-exception? (atom false)]
-      (testing "empty config"
-        (try+
-          (boot! [service])
-          (catch [:type :crapperkeeper/invalid-config-error] _
-            (reset! got-expected-exception? true)))
-        (is @got-expected-exception?)))))
 
 (deftest service-dependency-test
   (testing "a service can express a dependency on another service"
@@ -82,38 +54,26 @@
                                  " and mars")))
           bar-service {:dependencies  #{HelloService}
                        :lifecycle-fns {:init init-fn}}]
-      (boot! [hello-service bar-service])
-      (is (= "hello world and mars" @result)))))
+      (with-services [hello-service bar-service]
+        (is (= "hello world and mars" @result))))))
 
 (deftest dependency-order-test
-  (let [result (atom {})
-        service-1-init (fn [context]
-                         (swap! result assoc :service-1
-                                {:init?            true
-                                 :service-2-init?  (get-in @result [:service-2 :init?])}))
-        service-2-init (fn [context]
-                         (swap! result assoc :service-2
-                                {:init?            true
-                                 :service-1-init?  (get-in @result [:service-1 :init?])}))
+  (let [result (atom [])
         service-1 {:implements HelloService
                    :service-fns {:hello (fn [context]
                                           "Hello again")}
-                   :lifecycle-fns {:init service-1-init}}
+                   :lifecycle-fns {:init (fn [context]
+                                           (swap! result conj 1))}}
         service-2 {:dependencies #{HelloService}
-                   :lifecycle-fns {:init service-2-init}}]
-    (boot! [service-1 service-2])
-    (testing "both services should have booted"
-      (is (get-in @result [:service-1 :init?]))
-      (is (get-in @result [:service-2 :init?])))
-    (testing "1 should have booted before 2"
-      (is (not (get-in @result [:service-1 :service-2-init?])))
-      (is (get-in @result [:service-2 :service-1-init?])))
-    (testing "the order in which the services are specified should not matter"
-      (reset! result {})
-      (boot! [service-2 service-1])
-      (testing "both services should have booted"
-        (is (get-in @result [:service-1 :init?]))
-        (is (get-in @result [:service-2 :init?])))
+                   :lifecycle-fns {:init (fn [context]
+                                           (swap! result conj 2))}}]
+
+    (with-services [service-1 service-2]
       (testing "1 should have booted before 2"
-        (is (not (get-in @result [:service-1 :service-2-init?])))
-        (is (get-in @result [:service-2 :service-1-init?]))))))
+        (is @result [1 2])))
+
+    (testing "the order in which the services are specified should not matter"
+      (reset! result [])
+      (with-services [service-1 service-2]
+        (testing "1 should have booted before 2"
+          (is @result [1 2]))))))

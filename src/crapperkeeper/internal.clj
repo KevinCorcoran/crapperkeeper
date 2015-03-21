@@ -10,6 +10,12 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; state
+(def services-atom (atom nil))
+(def contexts-atom (atom nil))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; internal schemas (public schemas defined in crapperkeeper.schemas)
 
 (def Service
@@ -26,6 +32,7 @@
     [Service]
     (schema/pred #(= (count %) 2))))
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (schema/defn validate-config!
@@ -36,6 +43,19 @@
       (when-let [schema-error (schema/check config-schema config)]
         (throw+ {:type :crapperkeeper/invalid-config-error
                  :error schema-error})))))
+
+(schema/defn run-lifecycle-fns :- Map
+  "Invokes the lifecycle function specified by 'fn-key' on every service in
+  'services'.  Returns the updated contexts."
+  [fn-key :- (schema/enum :init :start :stop)
+   services :- [ServiceWithId]
+   contexts :- Map]
+  (into {}
+        (for [service services]
+          (let [lifecycle-fn (get-in service [:lifecycle-fns fn-key])
+                id (:id service)
+                context (get contexts id)]
+            {id (if lifecycle-fn (lifecycle-fn context) context)}))))
 
 (schema/defn service->id :- Keyword
   "Returns the ID of the service if it has inherited one by implementing a
@@ -100,12 +120,16 @@
 (schema/defn sort-services :- [Service]
   "Given a list of services, returns a list of services in a dependency-order."
   [services :- [Service]]
-  (let [; Construct a graph.  Each node in the graph represents a service.
-        ; Initially, there are no edges in the graph.
-        graph (loom/digraph)
-        graph (apply loom/add-nodes graph services)
-        ; Add an edge in the graph for each dependency between services.
-        graph (loom/add-edges graph (services->dependencies services))]
+  (let [add-nodes (partial apply loom/add-nodes)
+        add-edges (partial apply loom/add-edges)
+        graph (->
+                ; Construct a graph.
+                (loom/digraph)
+                ; Each node in the graph represents a service.
+                ; Initially, there are no edges in the graph.
+                (add-nodes services)
+                ; Add an edge in the graph for each dependency between services.
+                (add-edges (services->dependencies services)))]
     ; Perform a topological sort of the graph.
     ; This returns the services in dependency-order.
     ; Concat this list with any of the "loner" services
@@ -133,15 +157,15 @@
   (into {} (for [service services]
              {(:id service) {:config config}})))
 
-(schema/defn run-lifecycle-fns :- Map
-  "Invokes the lifecycle function specified by 'fn-key' on every service in
-  'services'.  Returns the updated contexts."
-  [fn-key :- (schema/enum :init :start :stop)
-   services :- [ServiceWithId]
-   contexts :- Map]
-  (into {}
-        (for [service services]
-          (let [lifecycle-fn (get-in service [:lifecycle-fns fn-key])
-                id (:id service)
-                context (get contexts id)]
-            {id (if lifecycle-fn (lifecycle-fn context) context)}))))
+(schema/defn ^:always-validate boot!
+  "Starts the Trapperkeeper framework with the given list of services
+  and configuration data."
+  [services :- [Service]
+   config :- Map]
+  (validate-config! services config)
+  (let [services* (prepare-services services)]
+    (reset! services-atom services*)
+    (let [contexts (->> (initial-contexts services* config)
+                        (run-lifecycle-fns :init services*)
+                        (run-lifecycle-fns :start services*))]
+      (reset! contexts-atom contexts))))
