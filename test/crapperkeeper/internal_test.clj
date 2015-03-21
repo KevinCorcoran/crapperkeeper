@@ -2,19 +2,19 @@
   (:require [clojure.test :refer :all]
             [crapperkeeper.internal :refer :all]
             [crapperkeeper.fixtures :refer :all]
-            [loom.graph :as loom]))
+            [schema.test :as schema-test]))
 
-(deftest graph-construction-test
-  (testing "a single service"
-    (let [graph (services->graph [hello-service])]
-      (is (= 1 (count (loom/nodes graph))))
-      (is (= 0 (count (loom/edges graph))))
-      ; TODO um introspect the node a bit more and make sure it's actually correct?
-      ))
+(use-fixtures :once schema-test/validate-schemas)
 
-  (testing "two services"
-    (let [service {:dependencies  HelloService
-                   :lifecycle-fns {:init identity}}
-          graph (services->graph [service hello-service])]
-      ; TODO
-      )))
+(deftest dependency-extraction-test
+  (testing "service->dependencies correctly reports the dependencies of a given service"
+    (testing "one service, no dependencies"
+      (is (empty? (service->dependencies hello-service [hello-service]))))
+
+    (testing "two services w/ a dependency b/w them"
+      (let [my-service {:dependencies  #{HelloService}
+                        :lifecycle-fns {:init identity}}]
+        (is (= [[my-service hello-service]]
+               (service->dependencies my-service [hello-service my-service])))
+        (is (= [[my-service hello-service]]
+               (services->dependencies [hello-service my-service])))))))
