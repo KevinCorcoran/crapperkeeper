@@ -5,7 +5,8 @@
             [loom.graph :as loom]
             [loom.alg :as loom-alg])
   (:import (clojure.lang Keyword)
-           (java.util Map)))
+           (java.util Map)
+           (crapperkeeper.schemas ServiceInterface)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -14,6 +15,8 @@
 (def ServiceWithId
   (assoc Service :id Keyword))
 
+(def Dependency
+  [ServiceWithId ServiceWithId])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -64,34 +67,64 @@
                 context (get contexts id)]
             {id (if lifecycle-fn (lifecycle-fn context) context)}))))
 
+(schema/defn validate-services! :- [Service]
+  "Validates the user-specified services.  Checks for:
+
+    * missing dependencies
+    * multiple implementations of a service interface
+
+  Throws an error if the services are invalid, otherwise returns the services."
+  [services :- [Service]]
+  ; TODO
+  services)
+
 (schema/defn with-optional-dependencies :- [ServiceWithId]
   [services :- [ServiceWithId]]
   ; TODO
   services)
 
-(schema/defn services->graph
-  [services :- [ServiceWithId]]
-  ; TODO
-  )
+(schema/defn implementation-of
+  [interface :- ServiceInterface
+   services :- [ServiceWithId]]
+  (first (filter
+           #(= (:implements %) interface)
+           services)))
 
-(schema/defn graph->services :- ServiceWithId
-  [graph]
-  ; TODO
-  )
+(schema/defn services->dependencies :- [Dependency]
+  "Returns the list of dependencies expressed in the list of services."
+  [services :- [ServiceWithId]]
+  (->> services
+       (filter :dependencies)
+       (map (fn [service]
+              (map (fn [dependency]
+                     [service (implementation-of dependency services)])
+                   (:dependencies service))))
+       (flatten))
+
+  (map
+    (fn [service] {:id (:id service) {:dependencies}} (:dependencies service))
+    services))
 
 (schema/defn sort-dependencies :- [ServiceWithId]
   "Given a list of services, returns a list of services in a dependency-order."
   [services :- [ServiceWithId]]
-  (-> services
-      (services->graph)
-      (loom-alg/topsort)
-      (graph->services)))
+  ; Construct a graph.  Each node in the graph represents a service.
+  ; Initially, there are no edges in the graph.
+  (let [graph (loom/digraph services)
+        dependencies (services->dependencies services)]
+    (-> graph
+        ; Add an edge in the graph for each dependency between services.
+        (loom/add-edges dependencies)
+        ; Perform a topological sort of the graph.
+        ; This returns the list of services in dependency-order.
+        (loom-alg/topsort))))
 
 (schema/defn prepare-services :- [ServiceWithId]
   "Given the user-defined list of services,
   returns a list of services ready for use by Trapperkeeper."
   [services :- [Service]]
   (->> services
+       (validate-services!)
        (with-ids)
        (with-optional-dependencies)
        (sort-dependencies)))
