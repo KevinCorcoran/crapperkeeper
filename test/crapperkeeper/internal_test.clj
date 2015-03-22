@@ -38,12 +38,12 @@
 (deftest dependency-extraction-test
   (testing "service->dependencies correctly reports the dependencies of a given service"
     (testing "one service, no dependencies"
-      (is (empty? (service->dependencies hello-service [hello-service]))))
+      (is (empty? (service->dependencies foo-service [foo-service]))))
 
     (testing "two services w/ a dependency b/w them"
-      (let [my-service {:dependencies  #{HelloService}
+      (let [my-service {:dependencies  #{FooService}
                         :lifecycle-fns {:init identity}}]
-        (is (= [[my-service hello-service]]
-               (service->dependencies my-service [hello-service my-service])))
-        (is (= [[my-service hello-service]]
-               (services->dependencies [hello-service my-service])))))))
+        (is (= [[my-service foo-service]]
+               (service->dependencies my-service [foo-service my-service])))
+        (is (= [[my-service foo-service]]
+               (services->dependencies [foo-service my-service])))))))

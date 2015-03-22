@@ -1,10 +1,10 @@
 (ns crapperkeeper.fixtures
   (:import (crapperkeeper.schemas ServiceInterface)))
 
-(def HelloService
-  (ServiceInterface. #{:hello}))
+(def FooService
+  (ServiceInterface. #{:foo}))
 
-(def hello-service
-  {:implements  HelloService
-   :service-fns {:hello (fn [context]
-                          "hello world")}})
+(def foo-service
+  {:implements  FooService
+   :service-fns {:foo (fn [context]
+                          "hello from foo")}})

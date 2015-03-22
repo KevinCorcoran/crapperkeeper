@@ -10,8 +10,8 @@
 
 
 (deftest simplest-service-test
-  (with-services [hello-service]
-    (is (= (service-call HelloService :hello)
+  (with-services [foo-service]
+    (is (= (service-call FooService :foo)
            "hello world"))))
 
 (deftest lifecycle-test
@@ -28,12 +28,12 @@
       (is (= @results #{"init ran" "start ran" "stop ran"})))))
 
 (deftest context-test
-  (let [service {:implements HelloService
+  (let [service {:implements FooService
                  :lifecycle-fns {:init (fn [context]
                                          (assoc context :init? true))}
-                 :service-fns {:hello identity}}]
+                 :service-fns {:foo identity}}]
     (with-services [service]
-      (is (:init? (service-call HelloService :hello))))))
+      (is (:init? (service-call FooService :foo))))))
 
 (deftest config-test
   (testing "a service can read Trapperkeeper's configuration data"
@@ -50,21 +50,21 @@
     (let [result (atom nil)
           init-fn (fn [context]
                     (reset! result
-                            (str (service-call HelloService :hello)
+                            (str (service-call FooService :foo)
                                  " and mars")))
-          bar-service {:dependencies  #{HelloService}
+          bar-service {:dependencies  #{FooService}
                        :lifecycle-fns {:init init-fn}}]
-      (with-services [hello-service bar-service]
+      (with-services [foo-service bar-service]
         (is (= "hello world and mars" @result))))))
 
 (deftest dependency-order-test
   (let [result (atom [])
-        service-1 {:implements HelloService
-                   :service-fns {:hello (fn [context]
+        service-1 {:implements FooService
+                   :service-fns {:foo (fn [context]
                                           "Hello again")}
                    :lifecycle-fns {:init (fn [context]
                                            (swap! result conj 1))}}
-        service-2 {:dependencies #{HelloService}
+        service-2 {:dependencies #{FooService}
                    :lifecycle-fns {:init (fn [context]
                                            (swap! result conj 2))}}]
 
