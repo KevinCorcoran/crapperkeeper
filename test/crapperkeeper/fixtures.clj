@@ -2,7 +2,7 @@
   (:import (crapperkeeper.schemas ServiceInterface)))
 
 (def HelloService
-  (ServiceInterface. :hello-service #{:hello}))
+  (ServiceInterface. #{:hello}))
 
 (def hello-service
   {:implements  HelloService

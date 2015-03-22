@@ -4,8 +4,7 @@
            (java.util Map)))
 
 (schema/defrecord ServiceInterface
-  [id :- Keyword
-   service-fns :- #{Keyword}]) ; For now, a service function is simply a name (keyword)
+  [service-fns :- #{Keyword}]) ; For now, a service function is simply a name (keyword)
 
 (def Service
   "A schema which describes a Trapperkeeper service."

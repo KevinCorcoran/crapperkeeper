@@ -57,17 +57,9 @@
                 context (get contexts id)]
             {id (if lifecycle-fn (lifecycle-fn context) context)}))))
 
-(schema/defn service->id :- Keyword
-  "Returns the ID of the service if it has inherited one by implementing a
-  service interface, otherwise generates a new ID."
-  [service :- Service]
-  (or
-    (get-in service [:implements :id])
-    (keyword (gensym "trapperkeeper-service-"))))
-
 (schema/defn with-id :- ServiceWithId
   [service :- Service]
-  (assoc service :id (service->id service)))
+  (assoc service :id (keyword (gensym "trapperkeeper-service-"))))
 
 (schema/defn with-ids :- [ServiceWithId]
   "Wraps each of the given services with an ID."

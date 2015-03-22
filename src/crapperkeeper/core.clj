@@ -11,12 +11,11 @@
   [service-interface :- ServiceInterface
    fn-key :- Keyword
    & args]
-  (let [id (:id service-interface)
-        service (first (filter
-                         #(= (:id %) id)
+  (let [service (first (filter
+                         #(= (:implements %) service-interface)
                          @internal/services-atom))
         service-fn (get-in service [:service-fns fn-key])
-        context (get @internal/contexts-atom id)]
+        context (get @internal/contexts-atom (:id service))]
     (apply service-fn context args)))
 
 (defn shutdown!
