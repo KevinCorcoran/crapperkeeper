@@ -12,5 +12,6 @@
    (schema/optional-key :lifecycle-fns) {(schema/enum :init :start :stop) IFn}
    (schema/optional-key :service-fns)   {Keyword IFn}
    (schema/optional-key :dependencies)  #{ServiceInterface}
+   (schema/optional-key :optional-dependencies) #{ServiceInterface}
    (schema/optional-key :config-schema) Map})
 

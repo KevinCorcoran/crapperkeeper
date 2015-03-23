@@ -11,12 +11,12 @@
   [service-interface :- ServiceInterface
    fn-key :- Keyword
    & args]
-  (let [service (first (filter
-                         #(= (:implements %) service-interface)
-                         @internal/services-atom))
-        service-fn (get-in service [:service-fns fn-key])
-        context (get @internal/contexts-atom (:id service))]
-    (apply service-fn context args)))
+  (if-let [service (first (filter
+                            #(= (:implements %) service-interface)
+                            @internal/services-atom))]
+    (let [service-fn (get-in service [:service-fns fn-key])
+          context (get @internal/contexts-atom (:id service))]
+      (apply service-fn context args))))
 
 (defn shutdown!
   "Stops the Trapperkeeper framework and all services running within it.

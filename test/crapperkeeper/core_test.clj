@@ -11,8 +11,7 @@
 
 (deftest simplest-service-test
   (with-services [foo-service]
-    (is (= (service-call FooService :foo)
-           "hello world"))))
+    (is (= (service-call FooService :foo) "hello from foo"))))
 
 (deftest lifecycle-test
   (let [results (atom #{})
@@ -51,11 +50,11 @@
           init-fn (fn [context]
                     (reset! result
                             (str (service-call FooService :foo)
-                                 " and mars")))
+                                 " moo")))
           bar-service {:dependencies  #{FooService}
                        :lifecycle-fns {:init init-fn}}]
       (with-services [foo-service bar-service]
-        (is (= "hello world and mars" @result))))))
+        (is (= "hello from foo moo" @result))))))
 
 (deftest dependency-order-test
   (let [result (atom [])
@@ -77,3 +76,16 @@
       (with-services [service-1 service-2]
         (testing "1 should have booted before 2"
           (is @result [1 2]))))))
+
+(deftest optional-dependency-test
+  (testing "A service should be able to specify optional dependencies"
+    (let [my-service {:implements            TestService
+                      :optional-dependencies #{FooService}
+                      :service-fns           {:test (fn [context]
+                                                      (service-call FooService :foo))}}]
+      (testing "service calls work as normal when the dependency is available"
+        (with-services [my-service foo-service]
+          (is (= "hello from foo" (service-call TestService :test)))))
+
+      (testing "service calls return return nil when the dependency is unavailable"
+        (is (nil? (service-call TestService :test)))))))

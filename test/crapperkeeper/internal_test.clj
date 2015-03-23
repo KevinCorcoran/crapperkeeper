@@ -47,3 +47,10 @@
                (service->dependencies my-service [foo-service my-service])))
         (is (= [[my-service foo-service]]
                (services->dependencies [foo-service my-service])))))))
+
+(deftest optional-dependency-test
+  (let [my-service {:optional-dependencies #{FooService}
+                    :lifecycle-fns         {:init (fn [_] nil)}}
+        result (with-optional-dependencies [my-service foo-service])]
+    (is (= result [(assoc my-service :dependencies #{FooService}) foo-service]))))
+    #_(is (= (:dependencies result) #{FooService}))

@@ -77,17 +77,33 @@
   [services :- [Service]]
   )
 
-; TODO
-#_(schema/defn with-optional-dependencies :- [Service]
-  [services :- [Service]]
-  )
-
 (schema/defn implementation-of
   [interface :- ServiceInterface
    services :- [Service]]
   (first (filter
            #(= (:implements %) interface)
            services)))
+
+(schema/defn with-optional-dependencies :- [Service]
+  [services :- [Service]]
+  (for [service services]
+    (if-let [optional-dependencies (:optional-dependencies service)]
+      (reduce
+        (fn [service dependency]
+          (if (implementation-of dependency services)
+            ; TODO multiple deps not handled
+            ;(update-in service [:dependencies] conj implementation)
+            (assoc service :dependencies #{dependency})
+            ; No implementation of the optional dependency available
+            service))
+        service
+        optional-dependencies)
+      #_(for [dependency optional-dependencies]
+        (if-let [implementation (implementation-of dependency services)]
+          (update-in service [:dependencies] conj implementation)
+          ; No implementation of the optional dependency available
+          service))
+      service)))
 
 (schema/defn service->dependencies :- [Dependency]
   "Given all of the services and a particular services,
@@ -108,6 +124,7 @@
        (map #(service->dependencies % services))
        (remove nil?)
        (apply concat)))
+
 
 (schema/defn sort-services :- [Service]
   "Given a list of services, returns a list of services in a dependency-order."
@@ -138,7 +155,7 @@
   ;(validate-services! services)
   (->> services
        (with-ids)
-       ;(with-optional-dependencies)
+       (with-optional-dependencies)
        (sort-services)))
 
 (schema/defn initial-contexts :- Map
