@@ -11,6 +11,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; state
+
 (def services-atom (atom nil))
 (def contexts-atom (atom nil))
 
@@ -18,14 +19,21 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; internal schemas (public schemas defined in crapperkeeper.schemas)
 
+;; Internal Service schemas
+; Our internal use of schemas is a bit odd; services get an ID added to them,
+; and sometimes that is important (hence ServiceWithId) but oftentimes it is not
+; so we define an internal Service schema which makes the ID optional - among
+; other things, this increases reusability and makes testing easier.
+; However, someimtes we really do want to indicate that a service instance
+; hasn't yet been assigned an ID, hence ServiceWithoutId.
 (def Service
-  "Interally, this schema is used instead of crapperkeeper.core/Service
-  because services have IDs but most functions don't actually require that,
-  so using the ServiceWithId schema limits testability."
   (assoc schemas/Service (schema/optional-key :id) Keyword))
 
 (def ServiceWithId
   (assoc schemas/Service :id Keyword))
+
+(def ServiceWithoutId
+  schemas/Service)
 
 (def Dependency
   (schema/both
@@ -58,12 +66,12 @@
             {id (if lifecycle-fn (lifecycle-fn context) context)}))))
 
 (schema/defn with-id :- ServiceWithId
-  [service :- Service]
+  [service :- ServiceWithoutId]
   (assoc service :id (keyword (gensym "trapperkeeper-service-"))))
 
 (schema/defn with-ids :- [ServiceWithId]
   "Wraps each of the given services with an ID."
-  [services :- [Service]]
+  [services :- [schemas/Service]]
   (map with-id services))
 
 ; TODO
@@ -98,11 +106,6 @@
             service))
         service
         optional-dependencies)
-      #_(for [dependency optional-dependencies]
-        (if-let [implementation (implementation-of dependency services)]
-          (update-in service [:dependencies] conj implementation)
-          ; No implementation of the optional dependency available
-          service))
       service)))
 
 (schema/defn service->dependencies :- [Dependency]
@@ -151,7 +154,7 @@
 (schema/defn prepare-services :- [ServiceWithId]
   "Given the user-defined list of services,
   returns a list of services ready for use by Trapperkeeper."
-  [services :- [Service]]
+  [services :- [ServiceWithoutId]]
   ;(validate-services! services)
   (->> services
        (with-ids)
@@ -169,7 +172,7 @@
 (schema/defn ^:always-validate boot!
   "Starts the Trapperkeeper framework with the given list of services
   and configuration data."
-  [services :- [Service]
+  [services :- [ServiceWithoutId]
    config :- Map]
   (validate-config! services config)
   (let [services* (prepare-services services)]
