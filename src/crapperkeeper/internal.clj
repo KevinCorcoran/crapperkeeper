@@ -60,10 +60,12 @@
    contexts :- Map]
   (into {}
         (for [service services]
-          (let [lifecycle-fn (get-in service [:lifecycle-fns fn-key])
-                id (:id service)
+          (let [id (:id service)
                 context (get contexts id)]
-            {id (if lifecycle-fn (lifecycle-fn context) context)}))))
+            {id
+             (if-let [lifecycle-fn (get service fn-key)]
+               (lifecycle-fn context)
+               context)}))))
 
 (schema/defn with-id :- ServiceWithId
   [service :- ServiceWithoutId]

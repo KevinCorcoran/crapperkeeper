@@ -15,24 +15,24 @@
 
 (deftest lifecycle-test
   (let [results (atom #{})
-        service {:lifecycle-fns {:init  (fn [context]
-                                          (swap! results conj "init ran"))
-                                 :start (fn [context]
-                                          (swap! results conj "start ran"))
-                                 :stop  (fn [context]
-                                          (swap! results conj "stop ran"))}}]
+        service {:init  (fn [context]
+                          (swap! results conj "init ran"))
+                 :start (fn [context]
+                          (swap! results conj "start ran"))
+                 :stop  (fn [context]
+                          (swap! results conj "stop ran"))}]
     (with-services [service]
       (is (= @results #{"init ran" "start ran"}))
       (shutdown!)
       (is (= @results #{"init ran" "start ran" "stop ran"})))))
 
 (deftest context-test
-  (let [service {:implements FooService
-                 :lifecycle-fns {:init (fn [context]
-                                         (assoc context :init? true))}
+  (let [service {:implements  FooService
+                 :init        (fn [context]
+                                (assoc context :init? true))
                  :service-fns {:foo identity}}]
     (with-services [service]
-      (is (:init? (service-call FooService :foo))))))
+                   (is (:init? (service-call FooService :foo))))))
 
 (deftest config-test
   (testing "a service can read Trapperkeeper's configuration data"
@@ -40,7 +40,7 @@
           extract-config (fn [context]
                            (reset! result
                                    (get-in context [:config :foo])))
-          service {:lifecycle-fns {:init extract-config}}]
+          service {:init extract-config}]
       (with-tk [service] {:foo "bar"})
       (is (= "bar" @result)))))
 
@@ -52,20 +52,20 @@
                             (str (service-call FooService :foo)
                                  " moo")))
           bar-service {:dependencies  #{FooService}
-                       :lifecycle-fns {:init init-fn}}]
+                       :init          init-fn}]
       (with-services [foo-service bar-service]
         (is (= "hello from foo moo" @result))))))
 
 (deftest dependency-order-test
   (let [result (atom [])
-        service-1 {:implements FooService
-                   :service-fns {:foo (fn [context]
+        service-1 {:implements    FooService
+                   :service-fns   {:foo (fn [context]
                                           "Hello again")}
-                   :lifecycle-fns {:init (fn [context]
-                                           (swap! result conj 1))}}
-        service-2 {:dependencies #{FooService}
-                   :lifecycle-fns {:init (fn [context]
-                                           (swap! result conj 2))}}]
+                   :init          (fn [context]
+                                    (swap! result conj 1))}
+        service-2 {:dependencies  #{FooService}
+                   :init          (fn [context]
+                                    (swap! result conj 2))}]
 
     (with-services [service-1 service-2]
       (testing "1 should have booted before 2"

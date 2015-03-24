@@ -24,7 +24,7 @@
 
 (deftest required-config-test
   (testing "a service can define a schema for its required configuration"
-    (let [service {:lifecycle-fns {:init (fn [context] nil)}
+    (let [service {:init          (fn [context] nil)
                    :config-schema {:webserver {:host String
                                                :port Integer}}}
           got-expected-exception? (atom false)]
@@ -42,7 +42,7 @@
 
     (testing "two services w/ a dependency b/w them"
       (let [my-service {:dependencies  #{FooService}
-                        :lifecycle-fns {:init identity}}]
+                        :init          identity}]
         (is (= [[my-service foo-service]]
                (service->dependencies my-service [foo-service my-service])))
         (is (= [[my-service foo-service]]
@@ -50,7 +50,7 @@
 
 (deftest optional-dependency-test
   (let [my-service {:optional-dependencies #{FooService}
-                    :lifecycle-fns         {:init (fn [_] nil)}}
+                    :init                  (fn [_] nil)}
         result (with-optional-dependencies [my-service foo-service])]
     (is (= result [(assoc my-service :dependencies #{FooService}) foo-service]))))
     #_(is (= (:dependencies result) #{FooService}))
