@@ -5,8 +5,7 @@
             [loom.graph :as loom]
             [loom.alg :as loom-alg])
   (:import (clojure.lang Keyword)
-           (java.util Map)
-           (crapperkeeper.schemas ServiceInterface)))
+           (java.util Map)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -88,7 +87,7 @@
   )
 
 (schema/defn implementation-of
-  [interface :- ServiceInterface
+  [interface :- schemas/ServiceInterface
    services :- [Service]]
   (first (filter
            #(= (:implements %) interface)
@@ -101,7 +100,7 @@
       (reduce
         (fn [service dependency]
           (if (implementation-of dependency services)
-            ; TODO multiple deps not handled
+            ; TODO a service with multiple dependencies won't work here
             ;(update-in service [:dependencies] conj implementation)
             (assoc service :dependencies #{dependency})
             ; No implementation of the optional dependency available

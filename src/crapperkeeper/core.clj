@@ -2,8 +2,7 @@
   (:require [crapperkeeper.internal :as internal]
             [crapperkeeper.schemas :refer :all]
             [schema.core :as schema])
-  (:import (clojure.lang Keyword)
-           (crapperkeeper.schemas ServiceInterface)))
+  (:import (clojure.lang Keyword)))
 
 (schema/defn ^:always-validate service-call
   "Inovkes the function named by 'fn-key' on the service-interface

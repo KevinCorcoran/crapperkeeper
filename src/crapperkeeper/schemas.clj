@@ -3,8 +3,15 @@
   (:import (clojure.lang IFn Keyword)
            (java.util Map)))
 
-(schema/defrecord ServiceInterface
-  [service-fns :- #{Keyword}]) ; For now, a service function is simply a name (keyword)
+(def ServiceFn
+  {:name                           Keyword
+   (schema/optional-key :doc)      String
+   (schema/optional-key :args)     [Keyword]
+   (schema/optional-key :arglists) [Keyword]})
+
+(def ServiceInterface
+  {(schema/optional-key :name) Keyword
+   :fns                        #{ServiceFn}})
 
 (def Service
   "A schema which describes a Trapperkeeper service."

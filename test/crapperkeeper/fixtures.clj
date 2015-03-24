@@ -1,8 +1,7 @@
-(ns crapperkeeper.fixtures
-  (:import (crapperkeeper.schemas ServiceInterface)))
+(ns crapperkeeper.fixtures)
 
 (def FooService
-  (ServiceInterface. #{:foo}))
+  {:fns #{{:name :foo}}})
 
 (def foo-service
   {:implements  FooService
@@ -10,7 +9,7 @@
                           "hello from foo")}})
 
 (def BarService
-  (ServiceInterface. #{:bar}))
+  {:fns #{{:name :bar}}})
 
 (def bar-service
   {:implements  BarService
@@ -18,4 +17,4 @@
                         "hifrom the bar")}})
 
 (def TestService
-  (ServiceInterface. #{:test}))
+  {:fns #{{:name :test}}})
