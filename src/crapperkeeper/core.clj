@@ -15,7 +15,9 @@
                             @internal/services-atom))]
     (let [service-fn (get-in service [:service-fns fn-key])
           context (get @internal/contexts-atom (:id service))]
-      (apply service-fn context args))))
+      (apply service-fn context args))
+    #_(log/info "service-call doing nothing because no implementation of"
+              service-interface "available")))
 
 (defn shutdown!
   "Stops the Trapperkeeper framework and all services running within it.
@@ -24,4 +26,6 @@
   (internal/run-lifecycle-fns
     :stop
     @internal/services-atom
-    @internal/contexts-atom))
+    @internal/contexts-atom)
+  ; TODO (deliver shutdown-promise)
+  )

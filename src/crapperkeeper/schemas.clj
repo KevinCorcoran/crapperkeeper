@@ -7,7 +7,7 @@
   {:name                           Keyword
    (schema/optional-key :doc)      String
    (schema/optional-key :args)     [Keyword]
-   (schema/optional-key :arglists) [Keyword]})
+   (schema/optional-key :arglists) [[Keyword]]})
 
 (def ServiceInterface
   {(schema/optional-key :name) Keyword

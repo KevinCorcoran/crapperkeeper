@@ -82,7 +82,7 @@
     * invalid service defitions (beyond the 'Service' schema) - e.g.,
       must define at least one lifecycle-fn or service-fn
     * missing dependencies
-    * multiple implementations of a service interface"
+    * multiple implementations of a service interface? (or should this be allowed?)"
   [services :- [Service]]
   )
 
