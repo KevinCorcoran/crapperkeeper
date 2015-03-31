@@ -1,6 +1,6 @@
-(ns crapperkeeper.core-test
+(ns crapperkeeper.api-test
   (:require [clojure.test :refer :all]
-            [crapperkeeper.core :refer :all]
+            [crapperkeeper :refer :all]
             [crapperkeeper.fixtures :refer :all]
             [crapperkeeper.test-utils :refer [with-tk with-services]]
             [slingshot.slingshot :refer [try+]]

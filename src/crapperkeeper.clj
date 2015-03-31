@@ -1,4 +1,4 @@
-(ns crapperkeeper.core
+(ns crapperkeeper
   (:require [crapperkeeper.internal :as internal]
             [crapperkeeper.schemas :refer :all]
             [schema.core :as schema])
