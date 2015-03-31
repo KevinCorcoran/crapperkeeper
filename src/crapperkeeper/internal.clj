@@ -1,5 +1,6 @@
 (ns crapperkeeper.internal
-  (:require [crapperkeeper.schemas :as schemas]
+  (:require [clojure.set :as set]
+            [crapperkeeper.schemas :as schemas]
             [schema.core :as schema]
             [slingshot.slingshot :refer [throw+]]
             [loom.graph :as loom]
@@ -100,9 +101,7 @@
       (reduce
         (fn [service dependency]
           (if (implementation-of dependency services)
-            ; TODO a service with multiple dependencies won't work here
-            ;(update-in service [:dependencies] conj implementation)
-            (assoc service :dependencies #{dependency})
+            (update-in service [:dependencies] set/union #{dependency})
             ; No implementation of the optional dependency available
             service))
         service
