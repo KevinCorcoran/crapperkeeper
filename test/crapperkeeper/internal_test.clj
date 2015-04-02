@@ -56,6 +56,6 @@
 (deftest optional-dependency-test
   (let [my-service {:optional-dependencies #{FooService}
                     :init                  (fn [_] nil)}
-        result (with-optional-dependencies [my-service foo-service])]
-    (is (= result [(assoc my-service :dependencies #{FooService}) foo-service]))))
-    #_(is (= (:dependencies result) #{FooService}))
+        result (with-optional-dependencies [my-service foo-service])
+        my-service* (assoc my-service :dependencies #{FooService})]
+    (is (= result [my-service* foo-service]))))
