@@ -16,6 +16,10 @@
     (let [service-fn (get-in service [:service-fns fn-key])
           context (get @internal/contexts-atom (:id service))]
       (apply service-fn context args))
+    ; TODO should this behave differently if the service is an optional vs. completely non-existent?
+    ; TODO I think so ... I think the latter should just be an error.
+    ; TODO see with-optional-dependencies
+    ; TODO definitely need a LOT more error handling in here, it's easy to get wrong
     #_(log/info "service-call doing nothing because no implementation of"
               service-interface "available")))
 

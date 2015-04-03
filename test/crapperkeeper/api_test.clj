@@ -89,7 +89,8 @@
           (is (= "hello from foo" (service-call TestService :test)))))
 
       (testing "service calls return return nil when the dependency is unavailable"
-        (is (nil? (service-call TestService :test)))))))
+        (with-services [my-service]
+          (is (nil? (service-call TestService :test))))))))
 
 (deftest config-transformationt-test
   (testing "A service should be able to specify a function to transform its configuration data"

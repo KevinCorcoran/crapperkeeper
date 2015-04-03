@@ -53,7 +53,7 @@
                  :error schema-error})))))
 
 ; TODO perhaps combine with validate-config! ?
-(schema/defn transform-configs
+(schema/defn transform-configs :- Map
   "For each service, if it defines a 'config-transformer', run that function on
   the user-supplied config data and return an updated context containing the
   transformed config data.  Also, if the service defined a
@@ -115,6 +115,7 @@
            #(= (:implements %) interface)
            services)))
 
+;; TODO there's a bug in here, it's returning the empty list
 (schema/defn with-optional-dependencies :- [Service]
   [services :- [Service]]
   (for [service services]
@@ -179,7 +180,8 @@
   ;(validate-services! services)
   (->> services
        (with-ids)
-       (with-optional-dependencies)
+       ; TODO this is currently broken
+       ;(with-optional-dependencies)
        (sort-services)))
 
 (schema/defn initial-contexts :- Map
