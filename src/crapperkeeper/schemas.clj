@@ -11,7 +11,7 @@
 
 (def ServiceInterface
   {(schema/optional-key :name) Keyword
-   :fns                        #{ServiceFn}})
+   :service-fns                #{ServiceFn}})
 
 (def Service
   "A schema which describes a Trapperkeeper service."

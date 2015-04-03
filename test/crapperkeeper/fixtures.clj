@@ -1,7 +1,7 @@
 (ns crapperkeeper.fixtures)
 
 (def FooService
-  {:fns #{{:name :foo}}})
+  {:service-fns #{{:name :foo}}})
 
 (def foo-service
   {:implements  FooService
@@ -9,7 +9,7 @@
                           "hello from foo")}})
 
 (def BarService
-  {:fns #{{:name :bar}}})
+  {:service-fns #{{:name :bar}}})
 
 (def bar-service
   {:implements  BarService
@@ -17,4 +17,4 @@
                         "hifrom the bar")}})
 
 (def TestService
-  {:fns #{{:name :test}}})
+  {:service-fns #{{:name :test}}})
