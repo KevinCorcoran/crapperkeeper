@@ -2,7 +2,7 @@
   "Utilities for testing Crapperkeeper services"
   (:require [crapperkeeper.internal :as internal]))
 
-(defmacro with-tk
+(defmacro with-ck
   "Test helper for bootstrapping Crapperkeeper and cleaning up afterward."
   [services config & body]
   `(try

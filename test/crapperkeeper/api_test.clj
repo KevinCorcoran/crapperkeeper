@@ -2,7 +2,7 @@
   (:require [clojure.test :refer :all]
             [crapperkeeper :refer :all]
             [crapperkeeper.fixtures :refer :all]
-            [crapperkeeper.test-utils :refer [with-tk with-services]]
+            [crapperkeeper.test-utils :refer [with-ck with-services]]
             [slingshot.slingshot :refer [try+]]
             [schema.test :as schema-test]
             [schema.core :as schema]))
@@ -42,7 +42,7 @@
                            (reset! result
                                    (get-in context [:config :foo])))
           service {:init extract-config}]
-      (with-tk [service] {:foo "bar"})
+      (with-ck [service] {:foo "bar"})
       (is (= "bar" @result)))))
 
 (deftest service-dependency-test
@@ -104,7 +104,7 @@
                       :implements                TestService
                       :service-fns               {:test (fn [context]
                                                           (:config context))}}]
-      (with-tk [my-service] {:host "localhost"}
+      (with-ck [my-service] {:host "localhost"}
                (is (= {:host "localhost" :port 8080} (service-call TestService :test)))))))
 
 ; TODO need a lot more tests around config transformation error handling and such
