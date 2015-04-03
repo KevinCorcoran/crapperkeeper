@@ -14,7 +14,7 @@
    :service-fns                #{ServiceFn}})
 
 (def Service
-  "A schema which describes a Trapperkeeper service."
+  "A schema which describes a Crapperkeeper service."
   {(schema/optional-key :implements)                ServiceInterface
    (schema/optional-key :init)                      IFn
    (schema/optional-key :start)                     IFn
