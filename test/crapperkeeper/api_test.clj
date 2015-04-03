@@ -4,7 +4,8 @@
             [crapperkeeper.fixtures :refer :all]
             [crapperkeeper.test-utils :refer [with-tk with-services]]
             [slingshot.slingshot :refer [try+]]
-            [schema.test :as schema-test]))
+            [schema.test :as schema-test]
+            [schema.core :as schema]))
 
 (use-fixtures :once schema-test/validate-schemas)
 
@@ -89,3 +90,21 @@
 
       (testing "service calls return return nil when the dependency is unavailable"
         (is (nil? (service-call TestService :test)))))))
+
+(deftest config-transformationt-test
+  (testing "A service should be able to specify a function to transform its configuration data"
+    (let [my-service {:config-schema             {(schema/optional-key :port) Long
+                                                  :host                       String}
+                      :transformed-config-schema {:port Long
+                                                  :host String}
+                      :config-transformer        (fn [config]
+                                                   (if (:port config)
+                                                     config
+                                                     (assoc config :port 8080)))
+                      :implements                TestService
+                      :service-fns               {:test (fn [context]
+                                                          (:config context))}}]
+      (with-tk [my-service] {:host "localhost"}
+               (is (= {:host "localhost" :port 8080} (service-call TestService :test)))))))
+
+; TODO need a lot more tests around config transformation error handling and such

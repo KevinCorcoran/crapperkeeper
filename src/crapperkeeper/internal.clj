@@ -52,6 +52,27 @@
         (throw+ {:type :crapperkeeper/invalid-config-error
                  :error schema-error})))))
 
+; TODO perhaps combine with validate-config! ?
+(schema/defn transform-configs
+  "For each service, if it defines a 'config-transformer', run that function on
+  the user-supplied config data and return an updated context containing the
+  transformed config data.  Also, if the service defined a
+  ':transformed-config-schema', validate the transformed config against that schema."
+  [services :- [Service]
+   contexts :- Map]
+  (into {}
+        (for [service services]
+          (let [service-id (:id service)
+                context (get contexts service-id)]
+            {service-id
+             (if-let [config-transformer (:config-transformer service)]
+               (let [transformed-config (config-transformer (:config context))]
+                 (when-let [transformed-config-schema (:transformed-config-schema service)]
+                   (schema/validate transformed-config-schema transformed-config))
+                 (assoc context :config transformed-config))
+               ; No config transformer for this service - just return the raw config
+               context)}))))
+
 (schema/defn run-lifecycle-fns :- Map
   "Invokes the lifecycle function specified by 'fn-key' on every service in
   'services'.  Returns the updated contexts."
@@ -178,6 +199,7 @@
   (let [services* (prepare-services services)]
     (reset! services-atom services*)
     (let [contexts (->> (initial-contexts services* config)
+                        (transform-configs services*)
                         (run-lifecycle-fns :init services*)
                         (run-lifecycle-fns :start services*))]
       (reset! contexts-atom contexts))))
