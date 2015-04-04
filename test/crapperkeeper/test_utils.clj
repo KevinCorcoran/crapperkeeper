@@ -4,22 +4,12 @@
 
 (defmacro with-ck
   "Test helper for bootstrapping Crapperkeeper and cleaning up afterward."
-  [services config & body]
-  `(try
-     (internal/boot! ~services ~config)
-     ~@body
-     (finally
-       (reset! internal/services-atom nil)
-       (reset! internal/contexts-atom nil))))
+  [state services config & body]
+  `(let [~state (internal/boot! ~services ~config)]
+     ~@body))
 
 (defmacro with-services
   "Test helper for bootstrapping Crapperkeeper without any config data."
-  [services & body]
-  `(try
-     (internal/boot! ~services {})
-     ~@body
-     (finally
-       (reset! internal/services-atom nil)
-       (reset! internal/contexts-atom nil))))
-
-
+  [state services & body]
+  `(let [~state (internal/boot! ~services {})]
+     ~@body))

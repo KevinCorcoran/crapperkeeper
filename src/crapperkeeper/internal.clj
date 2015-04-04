@@ -8,14 +8,6 @@
   (:import (clojure.lang Keyword)
            (java.util Map)))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; state
-
-(def services-atom (atom nil))
-(def contexts-atom (atom nil))
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; internal schemas (public schemas defined in crapperkeeper.schemas)
 
@@ -76,7 +68,8 @@
 (schema/defn run-lifecycle-fns :- Map
   "Invokes the lifecycle function specified by 'fn-key' on every service in
   'services'.  Returns the updated contexts."
-  [fn-key :- (schema/enum :init :start :stop)
+  [state :- Map
+   fn-key :- (schema/enum :init :start :stop)
    services :- [ServiceWithId]
    contexts :- Map]
   (into {}
@@ -85,7 +78,7 @@
                 context (get contexts id)]
             {id
              (if-let [lifecycle-fn (get service fn-key)]
-               (lifecycle-fn context)
+               (lifecycle-fn state context)
                context)}))))
 
 (schema/defn with-id :- ServiceWithId
@@ -195,13 +188,18 @@
 (schema/defn ^:always-validate boot!
   "Starts the Trapperkeeper framework with the given list of services
   and configuration data."
-  [services :- [ServiceWithoutId]
-   config :- Map]
-  (validate-config! services config)
-  (let [services* (prepare-services services)]
-    (reset! services-atom services*)
-    (let [contexts (->> (initial-contexts services* config)
-                        (transform-configs services*)
-                        (run-lifecycle-fns :init services*)
-                        (run-lifecycle-fns :start services*))]
-      (reset! contexts-atom contexts))))
+  ([services :- [ServiceWithoutId]
+    config :- Map]
+   (boot! services config {:services (atom nil) :contexts (atom nil)}))
+  ([services :- [ServiceWithoutId]
+    config :- Map
+    state :- Map]
+   (validate-config! services config)
+   (let [services* (prepare-services services)]
+     (reset! (:services state) services*)
+     (let [contexts (->> (initial-contexts services* config)
+                         (transform-configs services*)
+                         (run-lifecycle-fns state :init services*)
+                         (run-lifecycle-fns state :start services*))]
+       (reset! (:contexts state) contexts)))
+   state))

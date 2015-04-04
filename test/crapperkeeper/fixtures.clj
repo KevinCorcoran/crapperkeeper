@@ -5,7 +5,7 @@
 
 (def foo-service
   {:implements  FooService
-   :service-fns {:foo (fn [context]
+   :service-fns {:foo (fn [state context]
                           "hello from foo")}})
 
 (def BarService
@@ -13,7 +13,7 @@
 
 (def bar-service
   {:implements  BarService
-   :service-fns {:bar (fn [context]
+   :service-fns {:bar (fn [state context]
                         "hifrom the bar")}})
 
 (def TestService
