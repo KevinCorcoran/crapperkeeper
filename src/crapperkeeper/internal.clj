@@ -68,7 +68,7 @@
 (schema/defn run-lifecycle-fns :- Map
   "Invokes the lifecycle function specified by 'fn-key' on every service in
   'services'.  Returns the updated contexts."
-  [state :- Map
+  [app :- schemas/CrapperKeeper
    fn-key :- (schema/enum :init :start :stop)
    services :- [ServiceWithId]
    contexts :- Map]
@@ -78,7 +78,7 @@
                 context (get contexts id)]
             {id
              (if-let [lifecycle-fn (get service fn-key)]
-               (lifecycle-fn state context)
+               (lifecycle-fn app context)
                context)}))))
 
 (schema/defn with-id :- ServiceWithId
@@ -185,21 +185,21 @@
   (into {} (for [service services]
              {(:id service) {:config config}})))
 
-(schema/defn ^:always-validate boot!
-  "Starts the Trapperkeeper framework with the given list of services
-  and configuration data."
+(schema/defn ^:always-validate boot! :- schemas/CrapperKeeper
+  "Starts the Crapperkeeper framework with the given list of services
+  and configuration data. Returns the CrapperKeeper application."
   ([services :- [ServiceWithoutId]
     config :- Map]
    (boot! services config {:services (atom nil) :contexts (atom nil)}))
   ([services :- [ServiceWithoutId]
     config :- Map
-    state :- Map]
+    app :- schemas/CrapperKeeper]
    (validate-config! services config)
    (let [services* (prepare-services services)]
-     (reset! (:services state) services*)
+     (reset! (:services app) services*)
      (let [contexts (->> (initial-contexts services* config)
                          (transform-configs services*)
-                         (run-lifecycle-fns state :init services*)
-                         (run-lifecycle-fns state :start services*))]
-       (reset! (:contexts state) contexts)))
-   state))
+                         (run-lifecycle-fns app :init services*)
+                         (run-lifecycle-fns app :start services*))]
+       (reset! (:contexts app) contexts)))
+   app))

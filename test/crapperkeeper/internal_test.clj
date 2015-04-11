@@ -10,7 +10,7 @@
 (deftest invalid-service-test
   (testing ":implements value is not a ServiceInterface"
     (let [service {:implements  nil
-                   :service-fns {:foo (fn [state context] nil)}}
+                   :service-fns {:foo (fn [app context] nil)}}
           got-expected-exception? (atom false)]
       (try+
         (boot! [service] {})
@@ -24,7 +24,7 @@
 
 (deftest required-config-test
   (testing "a service can define a schema for its required configuration"
-    (let [service {:init          (fn [state context] nil)
+    (let [service {:init          (fn [app context] nil)
                    :config-schema {:webserver {:host String
                                                :port Long}}}
           got-expected-exception? (atom false)]

@@ -8,16 +8,16 @@
 (schema/defn ^:always-validate service-call
   "Inovkes the function named by 'fn-key' on the service-interface
   specified by 'service-interface' using the given arguments."
-  [state :- Map
+  [app :- CrapperKeeper
    service-interface :- ServiceInterface
    fn-key :- Keyword
    & args]
   (if-let [service (first (filter
                             #(= (:implements %) service-interface)
-                            @(:services state)))]
+                            @(:services app)))]
     (let [service-fn (get-in service [:service-fns fn-key])
-          context (get @(:contexts state) (:id service))]
-      (apply service-fn state context args))
+          context (get @(:contexts app) (:id service))]
+      (apply service-fn app context args))
     ; TODO should this behave differently if the service is an optional vs. completely non-existent?
     ; TODO I think so ... I think the latter should just be an error.
     ; TODO see with-optional-dependencies
@@ -28,11 +28,7 @@
 (schema/defn ^:always-validate shutdown!
   "Stops the Trapperkeeper framework and all services running within it.
   Calls 'stop' on each service."
-  [state :- Map]
-  (internal/run-lifecycle-fns
-   state
-   :stop
-   @(:services state)
-   @(:contexts state))
+  [app :- CrapperKeeper]
+  (internal/run-lifecycle-fns app :stop @(:services app) @(:contexts app))
   ;; TODO (deliver shutdown-promise)
   )
