@@ -28,5 +28,5 @@
 
 (def CrapperKeeper
   ;; Atoms of lists of services
-  {(schema/required-key :contexts) clojure.lang.Atom
-   (schema/required-key :services) clojure.lang.Atom})
+  {(schema/required-key :contexts) (schema/maybe Map)
+   (schema/required-key :services) (schema/maybe [schema/Any])})

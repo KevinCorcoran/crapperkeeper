@@ -68,14 +68,12 @@
 (schema/defn run-lifecycle-fns :- Map
   "Invokes the lifecycle function specified by 'fn-key' on every service in
   'services'.  Returns the updated contexts."
-  [app :- schemas/CrapperKeeper
-   fn-key :- (schema/enum :init :start :stop)
-   services :- [ServiceWithId]
-   contexts :- Map]
+  [fn-key :- (schema/enum :init :start :stop)
+   app :- schemas/CrapperKeeper]
   (into {}
-        (for [service services]
+        (for [service (:services app)]
           (let [id (:id service)
-                context (get contexts id)]
+                context (get (:contexts app) id)]
             {id
              (if-let [lifecycle-fn (get service fn-key)]
                (lifecycle-fn app context)
@@ -170,11 +168,11 @@
   "Given the user-defined list of services,
   returns a list of services ready for use by Trapperkeeper."
   [services :- [ServiceWithoutId]]
-  ;(validate-services! services)
+                                        ;(validate-services! services)
   (->> services
        (with-ids)
-       ; TODO this is currently broken
-       ;(with-optional-dependencies)
+                                        ; TODO this is currently broken
+                                        ;(with-optional-dependencies)
        (sort-services)))
 
 (schema/defn initial-contexts :- Map
@@ -185,21 +183,21 @@
   (into {} (for [service services]
              {(:id service) {:config config}})))
 
+(schema/defn ->CrapperKeeper :- schemas/CrapperKeeper
+  ([]
+   {:services nil :contexts nil})
+  ([services contexts]
+   {:services services :contexts contexts}))
+
 (schema/defn ^:always-validate boot! :- schemas/CrapperKeeper
-  "Starts the Crapperkeeper framework with the given list of services
-  and configuration data. Returns the CrapperKeeper application."
-  ([services :- [ServiceWithoutId]
-    config :- Map]
-   (boot! services config {:services (atom nil) :contexts (atom nil)}))
-  ([services :- [ServiceWithoutId]
-    config :- Map
-    app :- schemas/CrapperKeeper]
-   (validate-config! services config)
-   (let [services* (prepare-services services)]
-     (reset! (:services app) services*)
-     (let [contexts (->> (initial-contexts services* config)
-                         (transform-configs services*)
-                         (run-lifecycle-fns app :init services*)
-                         (run-lifecycle-fns app :start services*))]
-       (reset! (:contexts app) contexts)))
-   app))
+  [services :- [ServiceWithoutId]
+   config :- Map]
+  (validate-config! services config)
+  (let [services (prepare-services services)]
+    (->> (initial-contexts services config)
+         (transform-configs services)
+         (->CrapperKeeper services)
+         (run-lifecycle-fns :init)
+         (->CrapperKeeper services)
+         (run-lifecycle-fns :start)
+         (->CrapperKeeper services))))
