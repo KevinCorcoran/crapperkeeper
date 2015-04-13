@@ -1,4 +1,3 @@
-
 (require '[clojure.string :as string])
 
 ;; This file demonstrates the Crapperkeeper API.
@@ -15,14 +14,14 @@
 ;; 'init' lifecycle function and does nothing.
 
 (def no-op-service
-  {:init (fn [context]
+  {:init (fn [app context]
            nil)})
 
 ;; These service implementations are just maps, with a well-defined schema.
 
 (schema/check Service no-op-service) ; => nil
 
-(schema/check Service {:init-oops (fn [context]
+(schema/check Service {:init-oops (fn [app context]
                                     nil)}) ; => {:init-oops disallowed-key}
 
 ;; Service interfaces are also just maps.
@@ -65,12 +64,12 @@
    ;; ... are simply top-level keys in the service map
    ;; They're the same as in TK - take in the current service context,
    ;; return an updated context.
-   :init        (fn [context]
+   :init        (fn [app context]
                   (assoc context :something 42))
-   :start       (fn [context]
+   :start       (fn [app context]
                   (assert (:something context))
                   (assoc context :started? true))
-   :stop        (fn [context]
+   :stop        (fn [app context]
                   (println "stopping my service")
                   context)
 
@@ -82,7 +81,7 @@
    :service-fns {
                  ;; Service functions now get the context passed into them
                  ;; as the first argument, and the rest of the args follow.
-                 :foo (fn [context arg1 arg2]
+                 :foo (fn [app context arg1 arg2]
                         (str arg1 " " arg2))
                  ;; Service functions can now use schema/fn or schema/defn
                  :bar (schema/fn []
@@ -107,12 +106,12 @@
 
 ;; Start up the framework using a test helper
 
-(test-utils/with-services [my-service]
+(test-utils/with-services app [my-service]
 
   ;; Service calls are now simple function calls.
   ;; NB: service calls can now be made from _anywhere_,
   ;; not just inside a downstream service.
-  (ck/service-call MyService :foo 42 "is the answer")) ; => "42 is the answer"
+  (ck/service-call app MyService :foo 42 "is the answer")) ; => "42 is the answer"
 
 
 ;; Dependencies
@@ -130,17 +129,17 @@
 
 ;; Service calls just return 'nil' when the optional dependency doesn't exist.
 
-(test-utils/with-services [downstream-service]
-  (ck/service-call AnotherService :baz)) ; => nil
+(test-utils/with-services app [downstream-service]
+  (ck/service-call app AnotherService :baz)) ; => nil
 
 ;; ... but when an implementation exists, it's availble.
 
 (def another-service {:implements  AnotherService
-                      :service-fns {:baz (fn [context]
+                      :service-fns {:baz (fn [app context]
                                            "Is this your homework, Larry?")}})
 
-(test-utils/with-services [downstream-service another-service]
-  (ck/service-call AnotherService :baz)) ; => "Is this your homework, Larry?"
+(test-utils/with-services app [downstream-service another-service]
+  (ck/service-call app AnotherService :baz)) ; => "Is this your homework, Larry?"
 
 
 
@@ -178,13 +177,13 @@
                                :y String}
 
    :implements                AnotherService
-   :service-fns               {:baz (fn [context]
+   :service-fns               {:baz (fn [app context]
 
                                       ;; Config data is now in context.
                                       ;; No more config service.
                                       (:config context))}})
 
-(test-utils/with-ck [yet-another-service] {:x "foo"
+(test-utils/with-ck app [yet-another-service] {:x "foo"
                                            :y {:a "Hi,"
                                                :b ["I'm" "Adam" "Prince" "of" "Eternia"]}}
-  (ck/service-call AnotherService :baz)) ; => {:x "FOO", :y "Hi I'm Adam Prince of Eternia"}
+  (ck/service-call app AnotherService :baz)) ; => {:x "FOO", :y "Hi I'm Adam Prince of Eternia"}

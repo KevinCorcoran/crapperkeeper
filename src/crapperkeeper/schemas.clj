@@ -26,3 +26,7 @@
    (schema/optional-key :transformed-config-schema) Map
    (schema/optional-key :config-transformer)        IFn})
 
+(def CrapperKeeper
+  ;; Atoms of lists of services
+  {(schema/required-key :contexts) (schema/maybe Map)
+   (schema/required-key :services) (schema/maybe [schema/Any])})

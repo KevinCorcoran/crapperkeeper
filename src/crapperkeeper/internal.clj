@@ -8,14 +8,6 @@
   (:import (clojure.lang Keyword)
            (java.util Map)))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; state
-
-(def services-atom (atom nil))
-(def contexts-atom (atom nil))
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; internal schemas (public schemas defined in crapperkeeper.schemas)
 
@@ -77,15 +69,14 @@
   "Invokes the lifecycle function specified by 'fn-key' on every service in
   'services'.  Returns the updated contexts."
   [fn-key :- (schema/enum :init :start :stop)
-   services :- [ServiceWithId]
-   contexts :- Map]
+   app :- schemas/CrapperKeeper]
   (into {}
-        (for [service services]
+        (for [service (:services app)]
           (let [id (:id service)
-                context (get contexts id)]
+                context (get (:contexts app) id)]
             {id
              (if-let [lifecycle-fn (get service fn-key)]
-               (lifecycle-fn context)
+               (lifecycle-fn app context)
                context)}))))
 
 (schema/defn with-id :- ServiceWithId
@@ -177,11 +168,11 @@
   "Given the user-defined list of services,
   returns a list of services ready for use by Trapperkeeper."
   [services :- [ServiceWithoutId]]
-  ;(validate-services! services)
+                                        ;(validate-services! services)
   (->> services
        (with-ids)
-       ; TODO this is currently broken
-       ;(with-optional-dependencies)
+                                        ; TODO this is currently broken
+                                        ;(with-optional-dependencies)
        (sort-services)))
 
 (schema/defn initial-contexts :- Map
@@ -192,16 +183,21 @@
   (into {} (for [service services]
              {(:id service) {:config config}})))
 
-(schema/defn ^:always-validate boot!
-  "Starts the Trapperkeeper framework with the given list of services
-  and configuration data."
+(schema/defn ->CrapperKeeper :- schemas/CrapperKeeper
+  ([]
+   {:services nil :contexts nil})
+  ([services contexts]
+   {:services services :contexts contexts}))
+
+(schema/defn ^:always-validate boot! :- schemas/CrapperKeeper
   [services :- [ServiceWithoutId]
    config :- Map]
   (validate-config! services config)
-  (let [services* (prepare-services services)]
-    (reset! services-atom services*)
-    (let [contexts (->> (initial-contexts services* config)
-                        (transform-configs services*)
-                        (run-lifecycle-fns :init services*)
-                        (run-lifecycle-fns :start services*))]
-      (reset! contexts-atom contexts))))
+  (let [services (prepare-services services)]
+    (->> (initial-contexts services config)
+         (transform-configs services)
+         (->CrapperKeeper services)
+         (run-lifecycle-fns :init)
+         (->CrapperKeeper services)
+         (run-lifecycle-fns :start)
+         (->CrapperKeeper services))))
